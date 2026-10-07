@@ -1,0 +1,6 @@
+{
+  "name": "N-ATLAS Forge",
+  "description": "Developer infrastructure for Nigeria's Sovereign AI (NCAIR1/N-ATLaS) — Build, Test, Evaluate, and Integrate.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
