@@ -124,11 +124,18 @@ export class NAtlas {
 
       clearTimeout(timeout);
 
+      const contentType = res.headers.get('content-type') || '';
+      const text = await res.text();
+
+      if (contentType.includes('text/html') || text.includes('Starting Server')) {
+        throw new NAtlasClientError('Server is still starting up', 503, 'SERVER_STARTING');
+      }
+
       if (!res.ok) {
         let errMessage = `HTTP ${res.status} ${res.statusText}`;
         let errCode = 'API_ERROR';
         try {
-          const errJson = await res.json();
+          const errJson = JSON.parse(text);
           if (errJson.error) errMessage = errJson.error;
           if (errJson.code) errCode = errJson.code;
         } catch {
@@ -137,8 +144,16 @@ export class NAtlas {
         throw new NAtlasClientError(errMessage, res.status, errCode);
       }
 
-      const json = await res.json();
-      return json as T;
+      try {
+        const json = JSON.parse(text);
+        return json as T;
+      } catch {
+        throw new NAtlasClientError(
+          `Server returned non-JSON response (${res.status})`,
+          res.status,
+          'INVALID_RESPONSE'
+        );
+      }
     } catch (err: unknown) {
       clearTimeout(timeout);
       if (err instanceof NAtlasClientError) throw err;

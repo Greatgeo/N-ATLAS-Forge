@@ -10,6 +10,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { NAtlasHealth } from '../../../packages/shared/types.ts';
+import { API_BASE_URL } from '../../lib/api.ts';
 
 interface ApiExplorerViewProps {
   health: NAtlasHealth | null;
@@ -154,7 +155,7 @@ print(response)`;
     try {
       let res;
       if (testEndpoint === '/api/natlas/generate') {
-        res = await fetch('/api/natlas/generate', {
+        res = await fetch(`${API_BASE_URL}/api/natlas/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -164,9 +165,29 @@ print(response)`;
           }),
         });
       } else {
-        res = await fetch(testEndpoint);
+        res = await fetch(`${API_BASE_URL}${testEndpoint}`);
       }
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      let data;
+      if (contentType.includes('application/json')) {
+        try {
+          data = await res.json();
+        } catch {
+          const text = await res.text().catch(() => '');
+          try {
+            data = JSON.parse(text);
+          } catch {
+            data = { error: text || `HTTP ${res.status}: Non-JSON response received` };
+          }
+        }
+      } else {
+        const text = await res.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { error: text.slice(0, 500) };
+        }
+      }
       setApiResponse({ status: res.status, data });
     } catch (err: unknown) {
       setApiResponse({ status: 500, error: (err as Error).message });
