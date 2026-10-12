@@ -10,11 +10,7 @@ import {
   HelpCircle,
   Filter,
   FileDown,
-  Layers,
   Award,
-  Clock,
-  Sparkles,
-  ExternalLink,
 } from 'lucide-react';
 import {
   EvaluationCase,
@@ -28,6 +24,7 @@ import {
   runEvaluation,
   clearEvaluations,
 } from '../../lib/api.ts';
+import { Button, Card, Badge, MetricCard, Toast, ConfirmDialog } from '../ui/index.ts';
 
 interface EvaluationViewProps {
   health: NAtlasHealth | null;
@@ -43,6 +40,11 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
   const [activeLanguageFilter, setActiveLanguageFilter] = useState<string>('all');
   const [selectedRun, setSelectedRun] = useState<EvaluationRunResult | null>(null);
+
+  // In-app notifications & dialogs replacing window.alert and window.confirm
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info' | 'warning'; message: string } | null>(null);
+  const [confirmRunAllOpen, setConfirmRunAllOpen] = useState(false);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -74,16 +76,17 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
         setSelectedRun(res.results[0]);
       }
       onRunsUpdated?.();
+      setToast({ type: 'success', message: `Evaluation case [${caseId}] completed.` });
     } catch (err: unknown) {
-      alert(`Evaluation failed: ${(err as Error).message}`);
+      setToast({ type: 'error', message: `Evaluation failed: ${(err as Error).message}` });
     } finally {
       setLoading(false);
       setRunningCaseId(null);
     }
   };
 
-  const handleRunAll = async () => {
-    if (!confirm('Run complete 4-axis socio-legal benchmark suite across all cases?')) return;
+  const executeRunAll = async () => {
+    setConfirmRunAllOpen(false);
     setLoading(true);
     setRunningCaseId('ALL');
     try {
@@ -93,21 +96,23 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
         setSelectedRun(res.results[0]);
       }
       onRunsUpdated?.();
+      setToast({ type: 'success', message: `Completed full 4-axis benchmark suite (${res.results.length} cases).` });
     } catch (err: unknown) {
-      alert(`Evaluation run failed: ${(err as Error).message}`);
+      setToast({ type: 'error', message: `Evaluation run failed: ${(err as Error).message}` });
     } finally {
       setLoading(false);
       setRunningCaseId(null);
     }
   };
 
-  const handleClear = async () => {
-    if (!confirm('Clear all session evaluation records?')) return;
+  const executeClear = async () => {
+    setConfirmClearOpen(false);
     await clearEvaluations();
     setRuns([]);
     setReport(null);
     setSelectedRun(null);
     onRunsUpdated?.();
+    setToast({ type: 'info', message: 'Cleared all session evaluation records.' });
   };
 
   const handleExportJson = () => {
@@ -119,6 +124,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
     a.download = `natlas-evaluation-report-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setToast({ type: 'success', message: 'Evaluation JSON report exported.' });
   };
 
   const handleExportMarkdown = () => {
@@ -147,6 +153,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
     a.download = `natlas-evaluation-report-${new Date().toISOString().slice(0, 10)}.md`;
     a.click();
     URL.revokeObjectURL(url);
+    setToast({ type: 'success', message: 'Evaluation Markdown report exported.' });
   };
 
   const filteredCases = cases.filter((c) => {
@@ -157,6 +164,37 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Confirmation Dialogs replacing native window.confirm() */}
+      <ConfirmDialog
+        isOpen={confirmRunAllOpen}
+        title="Execute Benchmark Suite"
+        message="This will run the deterministic 4-axis socio-legal evaluation suite across all curated cases. Proceed?"
+        confirmLabel="Run All"
+        variant="primary"
+        isLoading={loading}
+        onConfirm={executeRunAll}
+        onCancel={() => setConfirmRunAllOpen(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmClearOpen}
+        title="Clear Evaluation Records"
+        message="Are you sure you want to clear all session benchmark runs and reset composite scores?"
+        confirmLabel="Clear Records"
+        variant="danger"
+        onConfirm={executeClear}
+        onCancel={() => setConfirmClearOpen(false)}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
@@ -165,130 +203,127 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
             Evaluation Lab & Benchmark Suite
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Empirical 4-Axis Socio-Legal Evaluation Rubric (Accuracy, Relevance, Clarity, Nigerian Cultural Context).
+            Empirical 4-Axis socio-legal evaluation rubric (Accuracy, Relevance, Clarity, Nigerian Cultural & Legal Context).
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {report && (
             <>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={handleExportJson}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-300 hover:text-white transition-colors"
-                title="Download JSON Report"
+                leftIcon={<Download className="w-3.5 h-3.5 text-amber-400" />}
               >
-                <Download className="w-3.5 h-3.5 text-amber-400" />
-                <span>Export JSON</span>
-              </button>
-              <button
+                Export JSON
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={handleExportMarkdown}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-300 hover:text-white transition-colors"
-                title="Download Markdown Report"
+                leftIcon={<FileDown className="w-3.5 h-3.5 text-emerald-400" />}
               >
-                <FileDown className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Export MD</span>
-              </button>
+                Export MD
+              </Button>
             </>
           )}
 
           {runs.length > 0 && (
-            <button
-              onClick={handleClear}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400 hover:text-rose-300 transition-colors"
-              title="Clear runs"
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmClearOpen(true)}
+              leftIcon={<RotateCcw className="w-3.5 h-3.5 text-slate-400" />}
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Clear</span>
-            </button>
+              Clear
+            </Button>
           )}
 
-          <button
-            onClick={handleRunAll}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setConfirmRunAllOpen(true)}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs transition-colors shadow-lg shadow-amber-500/10"
+            isLoading={loading && runningCaseId === 'ALL'}
+            leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>{loading && runningCaseId === 'ALL' ? 'Running Benchmark Suite...' : 'Run All Benchmarks'}</span>
-          </button>
+            Run All Benchmarks
+          </Button>
         </div>
       </div>
 
-      {/* Top Metrics Ribbon (Only shown if evaluations have actually run) */}
+      {/* Top Metrics Ribbon */}
       {runs.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950/40 p-6 text-center space-y-2">
           <div className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
             STATUS: NOT YET EVALUATED
           </div>
-          <p className="text-xs text-slate-500 max-w-xl mx-auto">
-            Per Rule 5, no synthetic scores are shown prior to execution. Run individual benchmark cases below or click{' '}
+          <p className="text-xs text-slate-400 max-w-xl mx-auto leading-relaxed">
+            All benchmark scores must originate from actual execution runs. Run individual benchmark cases below or click{' '}
             <span className="text-amber-300 font-mono">Run All Benchmarks</span> to generate verified empirical results.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
-            <div className="text-[11px] font-mono text-slate-400 uppercase">Composite Score</div>
-            <div className="text-2xl font-bold font-mono text-amber-300 mt-1">
-              {report?.averageScore.toFixed(1)} <span className="text-xs text-slate-500">/ 5.0</span>
-            </div>
-            <div className="text-[10px] text-slate-500 font-mono mt-1">Weighted 4-Axis Rubric</div>
-          </div>
-
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
-            <div className="text-[11px] font-mono text-slate-400 uppercase">Success Rate</div>
-            <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">
-              {report?.passedCases} / {report?.totalCases}
-            </div>
-            <div className="text-[10px] text-slate-500 font-mono mt-1">
-              {Math.round(((report?.passedCases || 0) / (report?.totalCases || 1)) * 100)}% Passing
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
-            <div className="text-[11px] font-mono text-slate-400 uppercase">Mean Latency</div>
-            <div className="text-2xl font-bold font-mono text-blue-400 mt-1">
-              {report?.averageLatencyMs} <span className="text-xs text-slate-500">ms</span>
-            </div>
-            <div className="text-[10px] text-slate-500 font-mono mt-1">Per Autoregressive Run</div>
-          </div>
-
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
-            <div className="text-[11px] font-mono text-slate-400 uppercase">Evaluator Engine</div>
-            <div className="text-sm font-bold font-mono text-purple-300 mt-2 truncate">
-              Deterministic Rules
-            </div>
-            <div className="text-[10px] text-slate-500 font-mono mt-1">CAMA / VAT / Naira Check</div>
-          </div>
+          <MetricCard
+            label="Composite Score"
+            value={report?.averageScore !== undefined ? report.averageScore.toFixed(1) : '—'}
+            unit="/ 5.0"
+            subValue="Weighted 4-Axis Rubric"
+            tone="amber"
+          />
+          <MetricCard
+            label="Success Rate"
+            value={report ? `${report.passedCases} / ${report.totalCases}` : '—'}
+            subValue={`${Math.round(((report?.passedCases || 0) / (report?.totalCases || 1)) * 100)}% Passing Cases`}
+            tone="green"
+          />
+          <MetricCard
+            label="Mean Latency"
+            value={report?.averageLatencyMs !== undefined ? report.averageLatencyMs : '—'}
+            unit="ms"
+            subValue="Per Autoregressive Run"
+            tone="blue"
+          />
+          <MetricCard
+            label="Evaluator Engine"
+            value="Deterministic"
+            subValue="CAMA / VAT / Naira Validation"
+            tone="cyan"
+          />
         </div>
       )}
 
       {/* Filter Ribbon */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border border-slate-800/80 bg-slate-900/40 text-xs">
-        <div className="flex items-center gap-2">
-          <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-mono text-slate-400 text-[11px]">CATEGORY:</span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Filter className="w-3.5 h-3.5 text-slate-400 mr-1" />
+          <span className="font-mono text-slate-400 text-[11px] mr-1">CATEGORY:</span>
           {['all', 'sme_business', 'financial_literacy', 'civic_education', 'everyday_multilingual'].map((cat) => (
             <button
               key={cat}
+              type="button"
               onClick={() => setActiveCategoryFilter(cat)}
-              className={`px-2.5 py-1 rounded-md text-[11px] capitalize transition-colors ${
+              className={`px-2.5 py-1 rounded-md text-[11px] capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                 activeCategoryFilter === cat
                   ? 'bg-slate-800 text-amber-300 font-semibold border border-slate-700'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              {cat === 'all' ? 'All Categories' : cat.replace('_', ' ')}
+              {cat === 'all' ? 'All' : cat.replace('_', ' ')}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-slate-400 text-[11px]">LANGUAGE:</span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-mono text-slate-400 text-[11px] mr-1">LANGUAGE:</span>
           {['all', 'en', 'pcm', 'yo', 'ha', 'ig'].map((lang) => (
             <button
               key={lang}
+              type="button"
               onClick={() => setActiveLanguageFilter(lang)}
-              className={`px-2 py-0.5 rounded text-[11px] uppercase font-mono transition-colors ${
+              className={`px-2 py-0.5 rounded text-[11px] uppercase font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                 activeLanguageFilter === lang
                   ? 'bg-slate-800 text-amber-300 font-bold border border-slate-700'
                   : 'text-slate-400 hover:text-slate-200'
@@ -351,7 +386,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
 
                       <p className="text-xs text-slate-400 line-clamp-2 mt-1">{testCase.prompt}</p>
 
-                      {/* Criteria tags */}
+                      {/* Statutory citations */}
                       <div className="flex flex-wrap items-center gap-1.5 pt-2">
                         {testCase.statutoryCitations?.map((cite) => (
                           <span
@@ -369,7 +404,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
                       {run ? (
                         <div className="text-right">
                           <div
-                            className={`font-mono text-sm font-bold flex items-center gap-1 ${
+                            className={`font-mono text-sm font-bold flex items-center gap-1 tabular-nums ${
                               run.status === 'passed'
                                 ? 'text-emerald-400'
                                 : run.status === 'warning'
@@ -386,7 +421,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
                             )}
                             {run.aggregateScore.toFixed(1)} / 5.0
                           </div>
-                          <span className="text-[10px] font-mono text-slate-500">
+                          <span className="text-[10px] font-mono text-slate-500 tabular-nums">
                             {run.latencyMs} ms
                           </span>
                         </div>
@@ -394,17 +429,19 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
                         <span className="text-[11px] font-mono text-slate-500 italic">Not run</span>
                       )}
 
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRunSingle(testCase.id);
                         }}
                         disabled={isRunning}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-200 text-xs font-medium transition-colors border border-slate-700"
+                        isLoading={isRunning}
+                        leftIcon={<Play className="w-3 h-3 fill-current" />}
                       >
-                        <Play className="w-3 h-3 fill-current" />
-                        <span>{isRunning ? 'Evaluating...' : 'Run'}</span>
-                      </button>
+                        {isRunning ? 'Evaluating' : 'Run'}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -415,24 +452,25 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
 
         {/* Right Column: Execution Inspection Card */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 sticky top-20">
+          <Card variant="standard" padding="md" className="space-y-4 sticky top-20">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-2">
                 <Award className="w-4 h-4 text-amber-400" />
                 Benchmark Result Inspector
               </h3>
               {selectedRun && (
-                <span
-                  className={`font-mono text-[11px] px-2 py-0.5 rounded uppercase font-semibold ${
+                <Badge
+                  tone={
                     selectedRun.status === 'passed'
-                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      ? 'connected'
                       : selectedRun.status === 'warning'
-                      ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                      : 'bg-rose-950 text-rose-300 border border-rose-800'
-                  }`}
+                      ? 'mock'
+                      : 'disconnected'
+                  }
+                  size="xs"
                 >
                   {selectedRun.status}
-                </span>
+                </Badge>
               )}
             </div>
 
@@ -446,25 +484,25 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
                   <div className="grid grid-cols-2 gap-2 font-mono">
                     <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                       <div className="text-slate-500 text-[10px]">ACCURACY</div>
-                      <div className="text-base font-bold text-white mt-0.5">
+                      <div className="text-base font-bold text-white mt-0.5 tabular-nums">
                         {selectedRun.scores.accuracy.toFixed(1)} / 5.0
                       </div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                       <div className="text-slate-500 text-[10px]">RELEVANCE</div>
-                      <div className="text-base font-bold text-white mt-0.5">
+                      <div className="text-base font-bold text-white mt-0.5 tabular-nums">
                         {selectedRun.scores.relevance.toFixed(1)} / 5.0
                       </div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                       <div className="text-slate-500 text-[10px]">CLARITY</div>
-                      <div className="text-base font-bold text-white mt-0.5">
+                      <div className="text-base font-bold text-white mt-0.5 tabular-nums">
                         {selectedRun.scores.clarity.toFixed(1)} / 5.0
                       </div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
                       <div className="text-slate-500 text-[10px]">NIGERIAN CONTEXT</div>
-                      <div className="text-base font-bold text-amber-300 mt-0.5">
+                      <div className="text-base font-bold text-amber-300 mt-0.5 tabular-nums">
                         {selectedRun.scores.nigerian_context.toFixed(1)} / 5.0
                       </div>
                     </div>
@@ -524,7 +562,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
 
                 <div className="text-[10px] font-mono text-slate-500 flex items-center justify-between pt-1">
                   <span>Model: {selectedRun.model}</span>
-                  <span>{selectedRun.latencyMs} ms</span>
+                  <span className="tabular-nums">{selectedRun.latencyMs} ms</span>
                 </div>
               </div>
             ) : (
@@ -533,7 +571,7 @@ export const EvaluationView: React.FC<EvaluationViewProps> = ({ health, onRunsUp
                 <p className="text-xs">Select any completed benchmark run on the left to inspect detailed 4-axis criteria breakdown.</p>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>

@@ -6,11 +6,10 @@ import {
   Play,
   Terminal,
   ExternalLink,
-  Layers,
-  ArrowRight,
 } from 'lucide-react';
 import { NAtlasHealth } from '../../../packages/shared/types.ts';
 import { API_BASE_URL } from '../../lib/api.ts';
+import { Button, Card, Badge, FormField, Textarea, Select, Toast } from '../ui/index.ts';
 
 interface ApiExplorerViewProps {
   health: NAtlasHealth | null;
@@ -25,6 +24,7 @@ export const ApiExplorerView: React.FC<ApiExplorerViewProps> = ({ health }) => {
   const [promptInput, setPromptInput] = useState('Explain CAMA 2020 annual returns for Nigerian small businesses.');
   const [executing, setExecuting] = useState(false);
   const [apiResponse, setApiResponse] = useState<any>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const getSnippet = () => {
     switch (langTab) {
@@ -146,6 +146,7 @@ print(response)`;
   const handleCopy = () => {
     navigator.clipboard.writeText(getSnippet());
     setCopied(true);
+    setToast({ type: 'success', message: 'Code snippet copied to clipboard.' });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -189,8 +190,14 @@ print(response)`;
         }
       }
       setApiResponse({ status: res.status, data });
+      if (res.ok) {
+        setToast({ type: 'success', message: `Request succeeded with HTTP ${res.status}.` });
+      } else {
+        setToast({ type: 'error', message: `Request returned HTTP ${res.status}.` });
+      }
     } catch (err: unknown) {
       setApiResponse({ status: 500, error: (err as Error).message });
+      setToast({ type: 'error', message: `Execution failed: ${(err as Error).message}` });
     } finally {
       setExecuting(false);
     }
@@ -198,6 +205,15 @@ print(response)`;
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Toast */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
@@ -215,7 +231,7 @@ print(response)`;
             href="https://huggingface.co/NCAIR1/N-ATLaS"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-300 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
           >
             <span>Hugging Face Model Card</span>
             <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
@@ -227,137 +243,122 @@ print(response)`;
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Code Generator Tabs */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+          <Card variant="standard" padding="none" className="overflow-hidden">
             {/* Lang Tabs */}
-            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-950/60 border-b border-slate-800">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-slate-950/70 border-b border-slate-800">
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setLangTab('typescript')}
-                  className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
-                    langTab === 'typescript'
-                      ? 'bg-slate-800 text-amber-300 font-semibold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  TypeScript SDK
-                </button>
-                <button
-                  onClick={() => setLangTab('python_sdk')}
-                  className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
-                    langTab === 'python_sdk'
-                      ? 'bg-slate-800 text-amber-300 font-semibold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Python REST
-                </button>
-                <button
-                  onClick={() => setLangTab('curl')}
-                  className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
-                    langTab === 'curl'
-                      ? 'bg-slate-800 text-amber-300 font-semibold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  cURL
-                </button>
-                <button
-                  onClick={() => setLangTab('transformers')}
-                  className={`px-3 py-1 rounded-md text-xs font-mono transition-colors ${
-                    langTab === 'transformers'
-                      ? 'bg-slate-800 text-amber-300 font-semibold'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  PyTorch Local
-                </button>
+                {(
+                  [
+                    { id: 'typescript', label: 'TypeScript SDK' },
+                    { id: 'python_sdk', label: 'Python REST' },
+                    { id: 'curl', label: 'cURL' },
+                    { id: 'transformers', label: 'PyTorch Local' },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setLangTab(tab.id)}
+                    className={`px-3 py-1 rounded-md text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+                      langTab === tab.id
+                        ? 'bg-slate-800 text-amber-300 font-semibold'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
 
-              <button
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={handleCopy}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
+                leftIcon={copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
+                {copied ? 'Copied' : 'Copy'}
+              </Button>
             </div>
 
             {/* Code Body */}
-            <div className="p-4 bg-slate-950/80 overflow-x-auto">
+            <div className="p-4 bg-slate-950/90 overflow-x-auto">
               <pre className="text-xs font-mono text-slate-200 leading-relaxed">
                 {getSnippet()}
               </pre>
             </div>
-          </div>
+          </Card>
 
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 text-xs space-y-2">
+          <Card variant="standard" padding="sm" className="text-xs space-y-1.5">
             <div className="font-mono text-amber-300 font-semibold uppercase text-[11px]">
-              Anti-Lockin Guarantee (Rule 3)
+              Anti-Lockin Guarantee (PS1 Architectural Rule)
             </div>
             <p className="text-slate-400 leading-relaxed">
-              Applications programmed against <span className="text-slate-200 font-mono">@n-atlas-forge/sdk</span> require zero architectural changes when switching between local GPU workstations and official cloud inference clusters. All provider mechanics are encapsulated behind the unified <span className="text-slate-200 font-mono">NAtlasAdapter</span> boundary.
+              Applications programmed against <span className="text-slate-200 font-mono">@n-atlas-forge/sdk</span> require zero architectural alterations when transitioning between local development and cloud endpoints. All communication routes through the unified <span className="text-slate-200 font-mono">NAtlasAdapter</span> boundary.
             </p>
-          </div>
+          </Card>
         </div>
 
         {/* Right Column: Live Interactive Request Sandbox */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
+          <Card variant="standard" padding="md" className="space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase text-slate-300">
                 <Terminal className="w-4 h-4 text-emerald-400" />
                 Live Request Sandbox
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+              <Badge tone="neutral" size="xs">
                 HTTP / JSON
-              </span>
+              </Badge>
             </div>
 
             {/* Endpoint Selector */}
-            <div className="space-y-1.5 text-xs">
-              <label className="font-mono text-slate-400 text-[11px]">TARGET ENDPOINT</label>
-              <select
+            <FormField label="TARGET ENDPOINT" id="endpoint-select">
+              <Select
+                id="endpoint-select"
                 value={testEndpoint}
                 onChange={(e) => setTestEndpoint(e.target.value as any)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs font-mono focus:outline-none focus:border-amber-500/50"
+                className="font-mono text-xs"
               >
-                <option value="/api/natlas/generate">POST /api/natlas/generate (Autoregressive Token Generation)</option>
+                <option value="/api/natlas/generate">POST /api/natlas/generate (Autoregressive Generation)</option>
                 <option value="/api/natlas/health">GET /api/natlas/health (Runtime & Model Status)</option>
                 <option value="/api/capabilities">GET /api/capabilities (Sovereign Features & Linguistic Scope)</option>
-              </select>
-            </div>
+              </Select>
+            </FormField>
 
             {/* Prompt input if generate */}
             {testEndpoint === '/api/natlas/generate' && (
-              <div className="space-y-1.5 text-xs">
-                <label className="font-mono text-slate-400 text-[11px]">PAYLOAD PROMPT</label>
-                <textarea
+              <FormField label="PAYLOAD PROMPT" id="prompt-input">
+                <Textarea
+                  id="prompt-input"
                   rows={3}
                   value={promptInput}
                   onChange={(e) => setPromptInput(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs font-mono focus:outline-none focus:border-amber-500/50"
+                  className="font-mono text-xs"
                 />
-              </div>
+              </FormField>
             )}
 
             {/* Run Button */}
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={handleExecute}
               disabled={executing}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs transition-colors shadow-lg shadow-emerald-600/10"
+              isLoading={executing}
+              className="w-full"
+              leftIcon={<Play className="w-3.5 h-3.5 fill-current" />}
             >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>{executing ? 'Executing Request...' : 'Send Test Request'}</span>
-            </button>
+              {executing ? 'Executing Request...' : 'Send Test Request'}
+            </Button>
 
             {/* Live Response Panel */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
                 <span>HTTP RESPONSE:</span>
                 {apiResponse && (
-                  <span className={apiResponse.status === 200 ? 'text-emerald-400' : 'text-rose-400'}>
+                  <Badge tone={apiResponse.status === 200 ? 'connected' : 'disconnected'} size="xs">
                     HTTP {apiResponse.status}
-                  </span>
+                  </Badge>
                 )}
               </div>
 
@@ -365,7 +366,7 @@ print(response)`;
                 {executing ? (
                   <div className="text-slate-500 italic py-4 text-center">Awaiting response from Forge...</div>
                 ) : apiResponse ? (
-                  <pre>{JSON.stringify(apiResponse, null, 2)}</pre>
+                  <pre className="whitespace-pre-wrap">{JSON.stringify(apiResponse, null, 2)}</pre>
                 ) : (
                   <div className="text-slate-600 italic py-6 text-center">
                     Click "Send Test Request" to execute against the active Forge backend.
@@ -373,7 +374,7 @@ print(response)`;
                 )}
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

@@ -3,8 +3,6 @@ import {
   Settings as SettingsIcon,
   Server,
   Cpu,
-  Key,
-  Clock,
   Save,
   CheckCircle2,
   AlertTriangle,
@@ -14,7 +12,8 @@ import {
   Check,
 } from 'lucide-react';
 import { NAtlasHealth, NAtlasMode } from '../../../packages/shared/types.ts';
-import { updateSettings, fetchCapabilities } from '../../lib/api.ts';
+import { updateSettings } from '../../lib/api.ts';
+import { Button, Card, Badge, FormField, Input, Toast } from '../ui/index.ts';
 
 interface SettingsViewProps {
   health: NAtlasHealth | null;
@@ -33,8 +32,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [timeoutMs, setTimeoutMs] = useState(60000);
   const [localWorkerPort, setLocalWorkerPort] = useState(8008);
   const [saving, setSaving] = useState(false);
-  const [savedSuccess, setSavedSuccess] = useState(false);
   const [copiedWorkerCommand, setCopiedWorkerCommand] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'warning' | 'info'; message: string } | null>(null);
 
   useEffect(() => {
     if (health?.mode) {
@@ -44,7 +43,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleSave = async () => {
     setSaving(true);
-    setSavedSuccess(false);
     try {
       await updateSettings({
         mode,
@@ -53,11 +51,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         timeoutMs,
         localWorkerPort,
       });
-      setSavedSuccess(true);
       onRefreshHealth();
-      setTimeout(() => setSavedSuccess(false), 3000);
+      setToast({ type: 'success', message: 'Runtime configuration saved and applied.' });
     } catch (err: unknown) {
-      alert(`Failed to save settings: ${(err as Error).message}`);
+      setToast({ type: 'error', message: `Failed to save settings: ${(err as Error).message}` });
     } finally {
       setSaving(false);
     }
@@ -68,11 +65,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleCopyCmd = () => {
     navigator.clipboard.writeText(workerCmd);
     setCopiedWorkerCommand(true);
+    setToast({ type: 'info', message: 'Worker launch command copied to clipboard.' });
     setTimeout(() => setCopiedWorkerCommand(false), 2000);
   };
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Toast */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
@@ -85,14 +92,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </p>
         </div>
 
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onRefreshHealth}
           disabled={healthLoading}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-300 hover:text-white transition-colors"
+          isLoading={healthLoading}
+          leftIcon={<RefreshCw className="w-3.5 h-3.5 text-amber-400" />}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin text-amber-400' : ''}`} />
-          <span>Test Connection</span>
-        </button>
+          Test Connection
+        </Button>
       </div>
 
       {/* Mode warning if mock is active */}
@@ -112,7 +121,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
           {/* Mode Selector Card */}
-          <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-4">
+          <Card variant="standard" padding="md" className="space-y-4">
             <div className="text-xs font-mono font-bold uppercase text-slate-300">
               Select Inference Provider Mode
             </div>
@@ -175,125 +184,118 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Mode-Specific Parameters */}
-          <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/60 space-y-4">
+          <Card variant="standard" padding="md" className="space-y-4">
             <div className="text-xs font-mono font-bold uppercase text-slate-300">
               Runtime Parameters
             </div>
 
             <div className="space-y-4 text-xs">
               {/* Model ID */}
-              <div>
-                <label className="block text-slate-400 mb-1 font-mono text-[11px]">
-                  HUGGING FACE MODEL REPO (Rule 2)
-                </label>
-                <input
+              <FormField
+                label="HUGGING FACE MODEL REPO (PS1 MODEL TARGET)"
+                helperText="Fixed to official sovereign repository. Substituting generic foreign models is strictly forbidden."
+                id="hf-model-id"
+              >
+                <Input
+                  id="hf-model-id"
                   type="text"
                   disabled
                   value="NCAIR1/N-ATLaS"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-amber-300 font-mono text-xs cursor-not-allowed opacity-90"
+                  className="text-amber-300 font-mono text-xs cursor-not-allowed opacity-90"
                 />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
-                  Fixed to official sovereign repository. Substituting generic foreign models is strictly forbidden.
-                </span>
-              </div>
+              </FormField>
 
               {/* Local Port if local mode */}
               {mode === 'local' && (
-                <div>
-                  <label className="block text-slate-400 mb-1 font-mono text-[11px]">
-                    LOCAL WORKER IPC PORT
-                  </label>
-                  <input
+                <FormField
+                  label="LOCAL WORKER IPC PORT"
+                  helperText="Default port: 8008 for local PyTorch worker daemon."
+                  id="worker-port"
+                >
+                  <Input
+                    id="worker-port"
                     type="number"
                     value={localWorkerPort}
                     onChange={(e) => setLocalWorkerPort(parseInt(e.target.value, 10))}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500/50"
+                    className="font-mono text-xs"
                   />
-                </div>
+                </FormField>
               )}
 
               {/* Remote API Settings if API mode */}
               {mode === 'api' && (
                 <>
-                  <div>
-                    <label className="block text-slate-400 mb-1 font-mono text-[11px]">
-                      NATLAS_API_URL
-                    </label>
-                    <input
+                  <FormField
+                    label="NATLAS_API_URL"
+                    helperText="Forge does not invent endpoints. Enter the official government or enterprise endpoint URL."
+                    id="api-url"
+                  >
+                    <Input
+                      id="api-url"
                       type="text"
                       placeholder="https://official-natlas.ncair.gov.ng"
                       value={apiUrl}
                       onChange={(e) => setApiUrl(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500/50"
+                      className="font-mono text-xs"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">
-                      Rule 1: Forge does not invent endpoints. Enter the official government or enterprise endpoint URL.
-                    </span>
-                  </div>
+                  </FormField>
 
-                  <div>
-                    <label className="block text-slate-400 mb-1 font-mono text-[11px]">
-                      NATLAS_API_KEY
-                    </label>
-                    <input
+                  <FormField
+                    label="NATLAS_API_KEY"
+                    helperText="Stored in server memory only. Never compiled into React frontend bundles."
+                    id="api-key"
+                  >
+                    <Input
+                      id="api-key"
                       type="password"
                       placeholder="Bearer token or authorization key"
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500/50"
+                      className="font-mono text-xs"
                     />
-                    <span className="text-[10px] text-slate-500 mt-0.5 block">
-                      Stored in server memory only. Never compiled into React frontend bundles (Rule 4).
-                    </span>
-                  </div>
+                  </FormField>
                 </>
               )}
 
               {/* Timeout */}
-              <div>
-                <label className="block text-slate-400 mb-1 font-mono text-[11px]">
-                  INFERENCE TIMEOUT (MILLISECONDS)
-                </label>
-                <input
+              <FormField
+                label="INFERENCE TIMEOUT (MILLISECONDS)"
+                helperText="Recommended: 60000ms for GPU inference, 120000ms for CPU inference."
+                id="timeout-ms"
+              >
+                <Input
+                  id="timeout-ms"
                   type="number"
                   step="5000"
                   value={timeoutMs}
                   onChange={(e) => setTimeoutMs(parseInt(e.target.value, 10))}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-500/50"
+                  className="font-mono text-xs"
                 />
-                <span className="text-[10px] text-slate-500 mt-0.5 block">
-                  Recommended: 60000ms for GPU, 120000ms for CPU inference.
-                </span>
-              </div>
+              </FormField>
             </div>
 
             {/* Save Button */}
-            <div className="pt-2 flex items-center gap-3">
-              <button
+            <div className="pt-2">
+              <Button
+                variant="primary"
+                size="md"
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold text-xs transition-colors shadow-lg shadow-amber-500/10"
+                isLoading={saving}
+                leftIcon={<Save className="w-4 h-4" />}
               >
-                <Save className="w-4 h-4" />
-                <span>{saving ? 'Applying Settings...' : 'Save & Apply Configuration'}</span>
-              </button>
-
-              {savedSuccess && (
-                <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Configuration updated successfully!
-                </span>
-              )}
+                {saving ? 'Applying Settings...' : 'Save & Apply Configuration'}
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Right Column: Local Worker Terminal helper */}
         <div className="lg:col-span-4 space-y-4">
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3">
+          <Card variant="standard" padding="md" className="space-y-3">
             <div className="text-xs font-mono font-bold uppercase text-slate-300 flex items-center gap-2">
               <Terminal className="w-4 h-4 text-emerald-400" />
               Launch PyTorch Daemon
@@ -303,22 +305,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </p>
 
             <div className="relative group">
-              <pre className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300 overflow-x-auto">
+              <pre className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-slate-300 overflow-x-auto pr-9">
                 {workerCmd}
               </pre>
               <button
+                type="button"
                 onClick={handleCopyCmd}
-                className="absolute top-2 right-2 p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                 title="Copy command"
+                aria-label="Copy worker command"
               >
                 {copiedWorkerCommand ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
 
-            <div className="text-[11px] text-slate-500 font-mono pt-1">
+            <div className="text-[11px] text-slate-400 font-mono pt-1">
               Supports <code className="text-amber-300">--load-in-4bit</code> flag for consumer GPUs with &lt;16GB VRAM.
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

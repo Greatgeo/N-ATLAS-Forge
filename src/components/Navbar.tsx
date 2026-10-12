@@ -8,7 +8,6 @@ import {
   BookOpen,
   Settings,
   ExternalLink,
-  ShieldCheck,
 } from 'lucide-react';
 import { NAtlasHealth } from '../../packages/shared/types.ts';
 import { StatusBadge } from './StatusBadge.tsx';
@@ -42,95 +41,92 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'playground' as NavTab, label: 'Playground', icon: Terminal },
     { id: 'evaluation' as NavTab, label: 'Evaluation Lab', icon: Activity },
     { id: 'api-explorer' as NavTab, label: 'API & SDK', icon: Code2 },
-    { id: 'doctor' as NavTab, label: 'Integration Doctor', icon: Stethoscope },
+    { id: 'doctor' as NavTab, label: 'Doctor', icon: Stethoscope },
     { id: 'docs' as NavTab, label: 'Docs', icon: BookOpen },
     { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-[#080d1a]/90 backdrop-blur-md border-b border-slate-800/80">
+    <header className="sticky top-0 z-40 bg-[#101827]/95 backdrop-blur-md border-b border-[#334155]/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Brand */}
-          <div className="flex items-center gap-3">
-            <div
-              onClick={() => onSelectTab('dashboard')}
-              className="cursor-pointer flex items-center gap-2.5 group"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 via-emerald-500/20 to-slate-900 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:border-amber-400 transition-colors">
-                <span className="font-mono font-bold text-sm">N</span>
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold tracking-tight text-white text-base font-sans group-hover:text-amber-300 transition-colors">
-                    N-ATLAS <span className="text-amber-400 font-mono text-sm">Forge</span>
-                  </span>
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/40 text-emerald-400">
-                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                    NAIC 2026 PS1
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-400 hidden sm:block">
-                  Build. Test. Evaluate. Integrate with Nigeria's Sovereign AI.
-                </p>
-              </div>
+        <div className="flex items-center justify-between h-16 gap-4">
+          {/* Zone 1: Brand Wordmark */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('dashboard')}
+            className="flex items-center gap-2.5 text-left group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#101827] rounded-lg"
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1D4ED8] to-[#38BDF8] flex items-center justify-center text-[#F8FAFC] shadow-sm shadow-blue-900/30 group-hover:brightness-110 transition-all">
+              <span className="font-mono font-bold text-sm">N</span>
             </div>
-          </div>
+            <div className="flex items-baseline gap-1.5 whitespace-nowrap shrink-0">
+              <span className="font-bold tracking-tight text-[#F8FAFC] text-base group-hover:text-[#38BDF8] transition-colors">
+                N-ATLAS
+              </span>
+              <span className="font-mono text-xs font-semibold text-[#38BDF8]">
+                Forge
+              </span>
+            </div>
+          </button>
 
-          {/* Navigation Items */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Zone 2: Navigation Links (Desktop) */}
+          <nav className="hidden lg:flex items-center gap-1" aria-label="Main Navigation">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => onSelectTab(tab.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] ${
                     isActive
-                      ? 'bg-slate-800 text-amber-300 border border-slate-700/80 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                      ? 'bg-[#1D4ED8] text-[#F8FAFC] font-semibold border border-[#38BDF8]/30 shadow-sm shadow-blue-900/20'
+                      : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#172235]'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#38BDF8]' : 'text-[#94A3B8]'}`} aria-hidden="true" />
                   <span>{tab.label}</span>
                 </button>
               );
             })}
           </nav>
 
-          {/* Right Status & Model Link */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Zone 3: Model Status & External Link */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <StatusBadge health={health} loading={healthLoading} onRefresh={onRefreshHealth} />
             <a
               href="https://huggingface.co/NCAIR1/N-ATLaS"
               target="_blank"
               rel="noopener noreferrer"
               title="Official Hugging Face Repository (NCAIR1/N-ATLaS)"
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900/70 text-slate-400 hover:text-amber-300 hover:border-slate-700 text-xs transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#334155] bg-[#172235] text-[#CBD5E1] hover:text-[#38BDF8] hover:border-[#38BDF8]/40 text-xs transition-colors shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
             >
-              <span className="font-mono text-[11px]">HF Hub</span>
-              <ExternalLink className="w-3 h-3 text-slate-500" />
+              <span className="font-mono text-[11px]">N-ATLaS Hub</span>
+              <ExternalLink className="w-3 h-3 text-[#94A3B8]" aria-hidden="true" />
             </a>
           </div>
         </div>
 
-        {/* Mobile Nav Bar */}
-        <div className="flex md:hidden overflow-x-auto py-2 gap-1 border-t border-slate-800/40">
+        {/* Mobile & Tablet Navigation Bar */}
+        <div className="flex lg:hidden overflow-x-auto py-2 gap-1 border-t border-[#334155]/60 no-scrollbar">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => onSelectTab(tab.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] whitespace-nowrap ${
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs whitespace-nowrap shrink-0 min-h-[40px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] ${
                   isActive
-                    ? 'bg-slate-800 text-amber-300 border border-slate-700 font-medium'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#1D4ED8] text-[#F8FAFC] border border-[#38BDF8]/30 font-semibold shadow-xs'
+                    : 'text-[#94A3B8] hover:text-[#F8FAFC] hover:bg-[#172235]'
                 }`}
               >
-                <Icon className="w-3 h-3" />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#38BDF8]' : 'text-[#94A3B8]'}`} aria-hidden="true" />
                 <span>{tab.label}</span>
               </button>
             );

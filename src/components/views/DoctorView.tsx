@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import {
   Stethoscope,
-  AlertTriangle,
   CheckCircle2,
   HelpCircle,
   Copy,
   Check,
-  RotateCcw,
-  Sparkles,
-  ExternalLink,
   ShieldAlert,
 } from 'lucide-react';
 import { NAtlasHealth, DiagnosticResult, NAtlasMode } from '../../../packages/shared/types.ts';
 import { diagnoseIssue } from '../../lib/api.ts';
+import { Button, Card, Badge, FormField, Textarea, Toast } from '../ui/index.ts';
 
 interface DoctorViewProps {
   health: NAtlasHealth | null;
@@ -62,10 +59,13 @@ export const DoctorView: React.FC<DoctorViewProps> = ({ health }) => {
   const [endpointUrl, setEndpointUrl] = useState('');
   const [diagnosis, setDiagnosis] = useState<DiagnosticResult | null>(null);
   const [copiedSnippet, setCopiedSnippet] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const handleDiagnose = async () => {
     if (!errorMessage.trim()) return;
 
+    setDiagnosing(true);
     try {
       const result = await diagnoseIssue({
         errorMessage,
@@ -74,8 +74,12 @@ export const DoctorView: React.FC<DoctorViewProps> = ({ health }) => {
         endpointUrl,
       });
       setDiagnosis(result);
+      setToast({ type: 'success', message: 'Diagnostic evaluation generated successfully.' });
     } catch (err) {
       console.error('Diagnosis failed', err);
+      setToast({ type: 'error', message: 'Failed to complete diagnostic analysis.' });
+    } finally {
+      setDiagnosing(false);
     }
   };
 
@@ -84,17 +88,28 @@ export const DoctorView: React.FC<DoctorViewProps> = ({ health }) => {
     setStackTrace(preset.stack);
     setMode(preset.mode);
     setDiagnosis(null);
+    setToast({ type: 'info', message: `Loaded failure preset: ${preset.title}` });
   };
 
   const handleCopySnippet = () => {
     if (!diagnosis?.correctedConfigSnippet) return;
     navigator.clipboard.writeText(diagnosis.correctedConfigSnippet);
     setCopiedSnippet(true);
+    setToast({ type: 'success', message: 'Corrected snippet copied to clipboard.' });
     setTimeout(() => setCopiedSnippet(false), 2000);
   };
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Toast */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
@@ -123,8 +138,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({ health }) => {
           {COMMON_ERROR_PRESETS.map((p, idx) => (
             <button
               key={idx}
+              type="button"
               onClick={() => handleLoadPreset(p)}
-              className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-300 hover:text-white transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-xs text-slate-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
             >
               {p.title}
             </button>
@@ -136,21 +152,22 @@ export const DoctorView: React.FC<DoctorViewProps> = ({ health }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Diagnostics Input */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-4">
-            <div className="flex items-center justify-between text-xs">
+          <Card variant="standard" padding="md" className="space-y-4">
+            <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2.5">
               <span className="font-mono uppercase font-bold text-slate-300">Diagnostic Parameters</span>
-              <span className="text-[10px] font-mono text-slate-500">Deterministic Analyzer</span>
+              <span className="text-[10px] font-mono text-slate-400">Deterministic Engine</span>
             </div>
 
             {/* Mode Selector */}
-            <div className="space-y-1 text-xs">
-              <label className="font-mono text-slate-400 text-[11px]">ACTIVE INTEGRATION MODE</label>
+            <div className="space-y-1.5 text-xs">
+              <label className="font-mono text-slate-400 text-[11px] block">ACTIVE INTEGRATION MODE</label>
               <div className="grid grid-cols-3 gap-2">
                 {(['local', 'api', 'mock'] as NAtlasMode[]).map((m) => (
                   <button
                     key={m}
+                    type="button"
                     onClick={() => setMode(m)}
-                    className={`py-1.5 rounded-md text-xs font-mono uppercase transition-colors ${
+                    className={`py-1.5 rounded-lg text-xs font-mono uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
                       mode === m
                         ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40'
                         : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
@@ -163,66 +180,66 @@ export const DoctorView: React.FC<DoctorViewProps> = ({ health }) => {
             </div>
 
             {/* Error Message Input */}
-            <div className="space-y-1 text-xs">
-              <label className="font-mono text-slate-400 text-[11px]">ERROR MESSAGE / STATUS</label>
-              <textarea
+            <FormField label="ERROR MESSAGE / STATUS" id="err-message">
+              <Textarea
+                id="err-message"
                 rows={4}
                 value={errorMessage}
                 onChange={(e) => setErrorMessage(e.target.value)}
                 placeholder="Paste runtime error message or HTTP status here..."
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-xs font-mono focus:outline-none focus:border-amber-500/50 resize-y"
+                className="font-mono text-xs text-slate-100"
               />
-            </div>
+            </FormField>
 
             {/* Optional Stack Trace */}
-            <div className="space-y-1 text-xs">
-              <label className="font-mono text-slate-400 text-[11px]">
-                OPTIONAL STACK TRACE / TERMINAL OUTPUT
-              </label>
-              <textarea
+            <FormField label="OPTIONAL STACK TRACE / TERMINAL OUTPUT" id="stack-trace">
+              <Textarea
+                id="stack-trace"
                 rows={3}
                 value={stackTrace}
                 onChange={(e) => setStackTrace(e.target.value)}
                 placeholder="Optional stack trace..."
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono focus:outline-none focus:border-amber-500/50 resize-y"
+                className="font-mono text-xs text-slate-300"
               />
-            </div>
+            </FormField>
 
             {/* Diagnose Trigger Button */}
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={handleDiagnose}
-              disabled={!errorMessage.trim()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs transition-colors shadow-lg shadow-emerald-600/10"
+              disabled={!errorMessage.trim() || diagnosing}
+              isLoading={diagnosing}
+              className="w-full"
+              leftIcon={<Stethoscope className="w-4 h-4" />}
             >
-              <Stethoscope className="w-4 h-4" />
-              <span>Diagnose Integration Failure</span>
-            </button>
-          </div>
+              {diagnosing ? 'Analyzing Root Cause...' : 'Diagnose Integration Failure'}
+            </Button>
+          </Card>
         </div>
 
         {/* Right Column: Diagnostic Results */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-5 space-y-5 min-h-[460px]">
+          <Card variant="standard" padding="md" className="space-y-5 min-h-[460px]">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xs font-mono font-bold uppercase text-slate-300">
-                  Diagnostic Report
-                </h3>
-              </div>
+              <h3 className="text-xs font-mono font-bold uppercase text-slate-300">
+                Diagnostic Report
+              </h3>
 
               {diagnosis && (
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase border ${
+                  <Badge
+                    tone={
                       diagnosis.severity === 'critical'
-                        ? 'bg-rose-950/60 text-rose-300 border-rose-800'
+                        ? 'disconnected'
                         : diagnosis.severity === 'high'
-                        ? 'bg-amber-950/60 text-amber-300 border-amber-800'
-                        : 'bg-blue-950/60 text-blue-300 border-blue-800'
-                    }`}
+                        ? 'mock'
+                        : 'info'
+                    }
+                    size="xs"
                   >
                     {diagnosis.severity}
-                  </span>
+                  </Badge>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
                     {diagnosis.category}
                   </span>
@@ -286,8 +303,9 @@ export const DoctorView: React.FC<DoctorViewProps> = ({ health }) => {
                         Corrected Configuration / Snippet:
                       </span>
                       <button
+                        type="button"
                         onClick={handleCopySnippet}
-                        className="flex items-center gap-1 text-[11px] font-mono text-amber-300 hover:text-amber-200"
+                        className="flex items-center gap-1 text-[11px] font-mono text-amber-300 hover:text-amber-200 focus-visible:outline-none focus-visible:underline"
                       >
                         {copiedSnippet ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                         <span>{copiedSnippet ? 'Copied' : 'Copy Snippet'}</span>
@@ -305,11 +323,11 @@ export const DoctorView: React.FC<DoctorViewProps> = ({ health }) => {
                 <HelpCircle className="w-10 h-10 mx-auto text-slate-700" />
                 <div className="text-xs font-mono">No Diagnosis Generated Yet</div>
                 <p className="text-xs max-w-sm mx-auto text-slate-400">
-                  Select a common error preset above or paste an integration error from your terminal to trigger deterministic root-cause analysis.
+                  Select a common error scenario above or paste an integration error from your terminal to trigger deterministic root-cause analysis.
                 </p>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>

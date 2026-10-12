@@ -22,6 +22,7 @@ import {
   NAtlasHealth,
 } from '../../../packages/shared/types.ts';
 import { generateCompletion } from '../../lib/api.ts';
+import { Button, Card, Badge, FormField, Textarea, Select, Toast } from '../ui/index.ts';
 
 interface PlaygroundViewProps {
   health: NAtlasHealth | null;
@@ -76,7 +77,8 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({ health }) => {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'text' | 'json'>('text');
-  const [savedNotification, setSavedNotification] = useState(false);
+  const [showPresetsMenu, setShowPresetsMenu] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -131,6 +133,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({ health }) => {
     if (!response) return;
     navigator.clipboard.writeText(response.text);
     setCopied(true);
+    setToastMessage({ type: 'success', message: 'Response copied to clipboard.' });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -138,49 +141,67 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({ health }) => {
     setSystemPrompt(sample.system);
     setUserPrompt(sample.user);
     setLanguage(sample.lang);
+    setShowPresetsMenu(false);
+    setToastMessage({ type: 'info', message: `Loaded preset: ${sample.title}` });
   };
 
   const handleSaveTest = () => {
     if (!response) return;
-    setSavedNotification(true);
-    setTimeout(() => setSavedNotification(false), 2500);
+    setToastMessage({ type: 'success', message: 'Test case bookmarked for current workbench session.' });
   };
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Toast Notification Container */}
+      {toastMessage && (
+        <Toast
+          type={toastMessage.type}
+          message={toastMessage.message}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#334155] pb-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            <span className="font-mono text-amber-400">N-ATLaS</span> Inference Playground
+          <h1 className="text-xl font-bold text-[#F8FAFC] tracking-tight flex items-center gap-2">
+            <span className="font-mono text-[#38BDF8]">N-ATLaS</span> Inference Playground
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Interactive prompt workbench for Nigeria's sovereign 8B model with token telemetry and parameter controls.
+          <p className="text-xs text-[#94A3B8] mt-0.5">
+            Autoregressive generation workbench for Nigeria's sovereign 8B model with token telemetry and hyperparameter controls.
           </p>
         </div>
 
         {/* Preset quick loader */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-mono hidden sm:inline">Presets:</span>
-          <div className="relative inline-block text-left group">
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-300 hover:text-white hover:border-slate-600 transition-colors">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Load Context Preset</span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
-            <div className="absolute right-0 mt-1 w-72 rounded-xl bg-slate-900 border border-slate-700 shadow-xl py-1 z-20 hidden group-hover:block hover:block">
+        <div className="relative">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowPresetsMenu(!showPresetsMenu)}
+            leftIcon={<Sparkles className="w-3.5 h-3.5 text-[#38BDF8]" />}
+            rightIcon={<ChevronDown className="w-3 h-3 text-[#94A3B8]" />}
+          >
+            Load Context Preset
+          </Button>
+
+          {showPresetsMenu && (
+            <div className="absolute right-0 mt-1 w-80 rounded-xl bg-[#172235] border border-[#334155] shadow-2xl py-1 z-30">
+              <div className="px-3 py-1.5 text-[10px] font-mono uppercase text-[#CBD5E1] font-semibold border-b border-[#334155]">
+                Nigerian Socio-Legal & Vernacular Presets
+              </div>
               {SAMPLE_PROMPTS.map((p, idx) => (
                 <button
                   key={idx}
+                  type="button"
                   onClick={() => handleLoadSample(p)}
-                  className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-amber-300 transition-colors border-b border-slate-800/60 last:border-0"
+                  className="w-full text-left px-3 py-2 text-xs text-[#CBD5E1] hover:bg-[#1E293B] hover:text-[#38BDF8] transition-colors border-b border-[#334155]/60 last:border-0"
                 >
-                  <div className="font-semibold">{p.title}</div>
-                  <div className="text-[11px] text-slate-400 truncate mt-0.5">{p.user}</div>
+                  <div className="font-semibold text-[#F8FAFC]">{p.title}</div>
+                  <div className="text-[11px] text-[#94A3B8] truncate mt-0.5">{p.user}</div>
                 </button>
               ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -189,48 +210,50 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({ health }) => {
         {/* Left Column: Input and Parameters */}
         <div className="lg:col-span-5 space-y-4">
           {/* Controls Bar */}
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase text-slate-300">
-                <Sliders className="w-3.5 h-3.5 text-amber-400" />
+          <Card variant="standard" padding="md" className="space-y-4">
+            <div className="flex items-center justify-between border-b border-[#334155] pb-2.5">
+              <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase text-[#F8FAFC]">
+                <Sliders className="w-3.5 h-3.5 text-[#38BDF8]" />
                 Hyperparameters
               </div>
-              <div className="text-[11px] font-mono text-slate-500">AutoModelForCausalLM</div>
+              <div className="text-[11px] font-mono text-[#94A3B8]">Llama-3 Architecture</div>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3.5 text-xs">
               {/* Language Selector */}
-              <div>
-                <label className="block text-slate-400 mb-1 font-mono text-[11px]">TARGET LANGUAGE</label>
-                <select
+              <FormField label="TARGET LANGUAGE" id="lang-select">
+                <Select
+                  id="lang-select"
                   value={language}
                   onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-amber-500/50"
                 >
                   <option value="en">English (Nigerian Socio-Legal Context)</option>
                   <option value="yo">Yoruba (Èdè Yorùbá)</option>
                   <option value="ha">Hausa (Harshen Hausa)</option>
                   <option value="ig">Igbo (Asụsụ Igbo)</option>
                   <option value="pcm">Nigerian Pidgin (Naija)</option>
-                </select>
-              </div>
+                </Select>
+              </FormField>
 
               {/* Temperature */}
               <div>
-                <div className="flex justify-between text-slate-400 mb-1">
-                  <span className="font-mono text-[11px]">TEMPERATURE:</span>
-                  <span className="font-mono text-amber-300 font-semibold">{temperature.toFixed(2)}</span>
+                <div className="flex justify-between text-[#94A3B8] mb-1.5">
+                  <label htmlFor="temp-slider" className="font-mono text-[11px] font-medium text-[#CBD5E1]">
+                    TEMPERATURE:
+                  </label>
+                  <span className="font-mono text-[#38BDF8] font-semibold tabular-nums">{temperature.toFixed(2)}</span>
                 </div>
                 <input
+                  id="temp-slider"
                   type="range"
                   min="0"
                   max="1.5"
                   step="0.05"
                   value={temperature}
                   onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                  className="w-full accent-amber-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                  className="w-full accent-[#1D4ED8] h-1.5 bg-[#1E293B] rounded-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
                 />
-                <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-0.5">
+                <div className="flex justify-between text-[10px] text-[#94A3B8] font-mono mt-1">
                   <span>0.0 (Deterministic)</span>
                   <span>0.7 (Balanced)</span>
                   <span>1.5 (Creative)</span>
@@ -239,159 +262,169 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({ health }) => {
 
               {/* Max Tokens */}
               <div>
-                <div className="flex justify-between text-slate-400 mb-1">
-                  <span className="font-mono text-[11px]">MAX TOKENS:</span>
-                  <span className="font-mono text-amber-300 font-semibold">{maxTokens}</span>
+                <div className="flex justify-between text-[#94A3B8] mb-1.5">
+                  <label htmlFor="tokens-slider" className="font-mono text-[11px] font-medium text-[#CBD5E1]">
+                    MAX TOKENS:
+                  </label>
+                  <span className="font-mono text-[#38BDF8] font-semibold tabular-nums">{maxTokens}</span>
                 </div>
                 <input
+                  id="tokens-slider"
                   type="range"
                   min="64"
                   max="2048"
                   step="64"
                   value={maxTokens}
                   onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}
-                  className="w-full accent-amber-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                  className="w-full accent-[#1D4ED8] h-1.5 bg-[#1E293B] rounded-lg cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
                 />
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* System Instruction */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <label className="font-mono uppercase text-slate-400 text-[11px]">System Instruction (Optional)</label>
-              <span className="text-[10px] font-mono text-slate-500">Llama-3 Header</span>
-            </div>
-            <textarea
-              rows={3}
-              value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder="System prompt context..."
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono focus:outline-none focus:border-amber-500/50 resize-y"
-            />
-          </div>
+          <Card variant="standard" padding="sm" className="space-y-2">
+            <FormField
+              label="SYSTEM INSTRUCTION (OPTIONAL)"
+              helperText="Injected into the Llama-3 header as the primary conditioning prompt."
+              id="sys-prompt"
+            >
+              <Textarea
+                id="sys-prompt"
+                rows={3}
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                placeholder="System prompt context..."
+                className="font-mono text-xs text-[#CBD5E1]"
+              />
+            </FormField>
+          </Card>
 
           {/* User Prompt */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <label className="font-mono uppercase text-slate-400 text-[11px]">User Prompt</label>
+          <Card variant="standard" padding="sm" className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="user-prompt" className="font-mono uppercase text-[#CBD5E1] text-xs font-medium">
+                User Prompt
+              </label>
               <button
+                type="button"
                 onClick={handleClear}
-                className="text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
+                className="text-[11px] text-[#94A3B8] hover:text-[#F8FAFC] transition-colors p-1"
               >
                 Clear
               </button>
             </div>
-            <textarea
-              rows={6}
+            <Textarea
+              id="user-prompt"
+              rows={5}
               value={userPrompt}
               onChange={(e) => setUserPrompt(e.target.value)}
               placeholder="Enter prompt in English, Pidgin, Yoruba, Hausa, or Igbo..."
-              className="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:border-amber-500/50 resize-y"
+              className="text-xs text-[#F8FAFC]"
             />
-          </div>
+          </Card>
 
           {/* Run & Action Buttons */}
           <div className="flex items-center gap-2">
             {!loading ? (
-              <button
+              <Button
+                variant="gradient"
+                size="lg"
                 onClick={handleRun}
                 disabled={!userPrompt.trim()}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:hover:bg-amber-500 text-slate-950 font-bold text-xs transition-colors shadow-lg shadow-amber-500/10"
+                className="flex-1"
+                leftIcon={<Play className="w-4 h-4 fill-current" />}
               >
-                <Play className="w-4 h-4 fill-current" />
-                <span>Run N-ATLaS Inference</span>
-              </button>
+                Run N-ATLaS Inference
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="danger"
+                size="lg"
                 onClick={handleStop}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors"
+                className="flex-1"
+                leftIcon={<Square className="w-4 h-4 fill-current" />}
               >
-                <Square className="w-4 h-4 fill-current" />
-                <span>Stop Generation</span>
-              </button>
+                Stop Generation
+              </Button>
             )}
 
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
               onClick={handleClear}
-              className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
               title="Reset prompt"
+              aria-label="Reset prompt"
             >
               <RotateCcw className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Right Column: Output & Response Inspector */}
         <div className="lg:col-span-7 flex flex-col space-y-4">
-          <div className="flex-1 rounded-xl border border-slate-800 bg-slate-900/60 flex flex-col overflow-hidden min-h-[460px]">
+          <div className="flex-1 rounded-xl border border-[#334155] bg-[#172235]/70 flex flex-col overflow-hidden min-h-[480px] shadow-lg">
             {/* Output Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/80 bg-slate-950/40">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#334155] bg-[#172235]">
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => setActiveTab('text')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] ${
                     activeTab === 'text'
-                      ? 'bg-slate-800 text-amber-300 font-semibold'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-[#1D4ED8] text-[#F8FAFC] font-semibold shadow-xs'
+                      : 'text-[#94A3B8] hover:text-[#F8FAFC]'
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  Generated Output
+                  <span>Output</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('json')}
                   disabled={!response}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] ${
                     activeTab === 'json'
-                      ? 'bg-slate-800 text-amber-300 font-semibold'
-                      : 'text-slate-500 hover:text-slate-300 disabled:opacity-40'
+                      ? 'bg-[#1D4ED8] text-[#F8FAFC] font-semibold shadow-xs'
+                      : 'text-[#94A3B8] hover:text-[#F8FAFC]'
                   }`}
                 >
                   <Code className="w-3.5 h-3.5" />
-                  JSON Inspector
+                  <span>JSON Telemetry</span>
                 </button>
               </div>
 
               {response && (
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="xs"
                     onClick={handleCopy}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
-                    title="Copy response"
+                    leftIcon={copied ? <Check className="w-3 h-3 text-[#22C55E]" /> : <Copy className="w-3 h-3" />}
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied' : 'Copy'}</span>
-                  </button>
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
 
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="xs"
                     onClick={handleSaveTest}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs transition-colors"
-                    title="Bookmark this test"
+                    leftIcon={<BookmarkPlus className="w-3 h-3 text-[#38BDF8]" />}
                   >
-                    <BookmarkPlus className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Save Test</span>
-                  </button>
+                    Save
+                  </Button>
                 </div>
               )}
             </div>
 
-            {/* Notification on save */}
-            {savedNotification && (
-              <div className="px-4 py-2 bg-emerald-950/80 border-b border-emerald-800 text-emerald-300 text-xs font-mono flex items-center gap-2">
-                <Check className="w-3.5 h-3.5" />
-                Prompt and output saved to local test workbench session!
-              </div>
-            )}
-
             {/* Mock Notice Bar if in Mock mode (Rule 2 & 16) */}
             {response?.isMock && (
-              <div className="px-4 py-2.5 bg-amber-950/80 border-b border-amber-800/80 text-amber-200 text-xs font-mono flex items-center gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="px-4 py-2.5 bg-amber-950/60 border-b border-amber-800/80 text-amber-200 text-xs font-mono flex items-center gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
                 <div>
-                  <span className="font-bold uppercase tracking-wider">DEVELOPMENT MOCK — NOT N-ATLaS:</span>
+                  <span className="font-bold uppercase tracking-wider">DEVELOPMENT MOCK — NOT N-ATLaS OUTPUT:</span>
                   <span className="ml-1 opacity-90">
-                    This synthetic output is generated strictly for offline UI layout validation. It must not be cited as real sovereign AI inference.
+                    Synthetic test output generated for offline validation.
                   </span>
                 </div>
               </div>
@@ -400,52 +433,50 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({ health }) => {
             {/* Content Area */}
             <div className="flex-1 p-5 overflow-y-auto">
               {loading && (
-                <div className="h-full flex flex-col items-center justify-center space-y-3 py-16 text-slate-400">
-                  <div className="relative">
-                    <div className="w-10 h-10 border-2 border-amber-500/20 border-t-amber-400 rounded-full animate-spin" />
+                <div className="h-full flex flex-col items-center justify-center space-y-3 py-16 text-[#94A3B8]">
+                  <div className="w-10 h-10 border-2 border-[#1D4ED8]/30 border-t-[#38BDF8] rounded-full animate-spin" />
+                  <div className="text-xs font-mono text-[#F8FAFC]">
+                    N-ATLaS autoregressive inference in progress...
                   </div>
-                  <div className="text-xs font-mono text-slate-300">
-                    N-ATLaS is generating autoregressively...
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
+                  <div className="text-[11px] text-[#94A3B8] font-mono">
                     Model: NCAIR1/N-ATLaS | Temp: {temperature}
                   </div>
                 </div>
               )}
 
               {error && (
-                <div className="rounded-xl border border-rose-900/60 bg-rose-950/30 p-4 space-y-2">
+                <div className="rounded-xl border border-rose-900/60 bg-rose-950/40 p-4 space-y-2">
                   <div className="flex items-center gap-2 text-rose-300 font-semibold text-xs font-mono">
                     <AlertTriangle className="w-4 h-4 text-rose-400" />
                     INFERENCE FAILURE
                   </div>
-                  <div className="text-xs text-rose-200 leading-relaxed">{error}</div>
-                  <div className="pt-2 text-[11px] text-slate-400 border-t border-rose-900/40">
-                    Tip: Use the <span className="text-amber-300 font-mono">Integration Doctor</span> tab to diagnose this error.
+                  <div className="text-xs text-rose-200 leading-relaxed font-mono whitespace-pre-wrap">{error}</div>
+                  <div className="pt-2 text-[11px] text-[#94A3B8] border-t border-rose-900/40">
+                    Tip: Diagnose this failure with the <span className="text-[#38BDF8] font-mono">Integration Doctor</span>.
                   </div>
                 </div>
               )}
 
               {!loading && !error && !response && (
-                <div className="h-full flex flex-col items-center justify-center py-20 text-center space-y-3 text-slate-500">
-                  <Cpu className="w-10 h-10 text-slate-700" />
-                  <div className="text-xs font-mono">Workbench Ready</div>
-                  <p className="text-xs max-w-sm text-slate-400">
-                    Enter a prompt or select a Nigerian contextual preset and click <span className="text-amber-300 font-mono">Run N-ATLaS Inference</span>.
+                <div className="h-full flex flex-col items-center justify-center py-20 text-center space-y-3 text-[#94A3B8]">
+                  <Cpu className="w-10 h-10 text-[#334155]" />
+                  <div className="text-xs font-mono text-[#CBD5E1]">Workbench Ready</div>
+                  <p className="text-xs max-w-sm text-[#94A3B8] leading-relaxed">
+                    Enter a prompt or select a Nigerian contextual preset and click <span className="text-[#38BDF8] font-mono">Run N-ATLaS Inference</span>.
                   </p>
                 </div>
               )}
 
               {!loading && !error && response && activeTab === 'text' && (
                 <div className="space-y-4">
-                  <div className="text-slate-100 text-sm whitespace-pre-wrap leading-relaxed font-sans">
+                  <div className="text-[#F8FAFC] text-sm whitespace-pre-wrap leading-relaxed font-sans selection:bg-[#1D4ED8]/30">
                     {response.text}
                   </div>
                 </div>
               )}
 
               {!loading && !error && response && activeTab === 'json' && (
-                <pre className="text-xs font-mono text-slate-300 bg-slate-950 p-4 rounded-lg overflow-x-auto border border-slate-800">
+                <pre className="text-xs font-mono text-[#CBD5E1] bg-[#101827] p-4 rounded-lg overflow-x-auto border border-[#334155]">
                   {JSON.stringify(response, null, 2)}
                 </pre>
               )}
@@ -453,28 +484,28 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({ health }) => {
 
             {/* Output Footer / Telemetry */}
             {response && (
-              <div className="px-4 py-2.5 bg-slate-950/80 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-slate-400">
+              <div className="px-4 py-2.5 bg-[#101827] border-t border-[#334155] flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-[#94A3B8]">
                 <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1 text-slate-300">
-                    <Cpu className="w-3 h-3 text-amber-400" />
+                  <span className="flex items-center gap-1 text-[#CBD5E1]">
+                    <Cpu className="w-3 h-3 text-[#38BDF8]" />
                     {response.model}
                   </span>
-                  <span className="flex items-center gap-1 text-slate-300">
-                    <Clock className="w-3 h-3 text-blue-400" />
-                    {response.latencyMs} ms
+                  <span className="flex items-center gap-1 text-[#CBD5E1]">
+                    <Clock className="w-3 h-3 text-[#60A5FA]" />
+                    <span className="tabular-nums">{response.latencyMs}</span> ms
                   </span>
                 </div>
 
                 <div className="flex items-center gap-3">
                   {response.usage ? (
-                    <span className="flex items-center gap-1 text-slate-300">
-                      <Hash className="w-3 h-3 text-purple-400" />
+                    <span className="flex items-center gap-1 text-[#CBD5E1] tabular-nums">
+                      <Hash className="w-3 h-3 text-indigo-400" />
                       In: {response.usage.inputTokens} | Out: {response.usage.outputTokens}
                     </span>
                   ) : (
-                    <span className="text-slate-500">Usage tokens: N/A in current stream</span>
+                    <span className="text-[#64748B]">Usage tokens: N/A</span>
                   )}
-                  <span className="text-slate-500">
+                  <span className="text-[#94A3B8] tabular-nums">
                     {new Date(response.timestamp).toLocaleTimeString()}
                   </span>
                 </div>

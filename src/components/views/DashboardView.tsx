@@ -4,20 +4,15 @@ import {
   Activity,
   Code2,
   Stethoscope,
-  BookOpen,
   ArrowRight,
   ExternalLink,
-  ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-  Clock,
   Layers,
   Database,
   RefreshCw,
 } from 'lucide-react';
 import { NAtlasHealth, EvaluationReport, EvaluationRunResult } from '../../../packages/shared/types.ts';
 import { NavTab } from '../Navbar.tsx';
+import { Button, Card, MetricCard, Badge } from '../ui/index.ts';
 
 interface DashboardViewProps {
   health: NAtlasHealth | null;
@@ -38,96 +33,119 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const isConnected = health?.status === 'connected';
   const isMock = health?.status === 'mock_mode' || health?.mode === 'mock';
+  const isDegraded = health?.status === 'degraded';
+
+  const badgeTone = isConnected
+    ? 'connected'
+    : isMock
+    ? 'mock'
+    : isDegraded
+    ? 'degraded'
+    : 'disconnected';
+
+  const statusLabel = isConnected
+    ? 'CONNECTED'
+    : isMock
+    ? 'DEVELOPMENT MOCK'
+    : isDegraded
+    ? 'DEGRADED'
+    : 'DISCONNECTED';
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Top Banner / Hero */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-b from-[#0c1328] via-[#080d1c] to-[#050814] p-6 sm:p-8">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+      {/* Top Banner / Hero Workspace Overview */}
+      <div className="relative overflow-hidden rounded-2xl border border-[#334155] bg-gradient-to-br from-[#101827] via-[#172235] to-[#1E293B] p-6 sm:p-8 shadow-xl">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#1D4ED8]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-[#38BDF8]/5 rounded-full blur-3xl pointer-events-none" />
+        
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono bg-amber-500/10 border border-amber-500/20 text-amber-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-              National AI Innovation Challenge 2026 — PS1 Developer Infrastructure
+            <div className="flex items-center gap-2 text-xs font-mono text-[#94A3B8]">
+              <span className="text-[#38BDF8] font-semibold">NAIC 2026 PS1</span>
+              <span aria-hidden="true" className="text-[#334155]">·</span>
+              <span className="text-[#CBD5E1]">Developer Infrastructure Track</span>
+              <span aria-hidden="true" className="text-[#334155]">·</span>
+              <span className="text-[#F8FAFC]">NCAIR1/N-ATLaS Foundation Model</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#F8FAFC] tracking-tight">
               Sovereign AI Engineering Workbench
             </h1>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              Accelerate developer adoption of <span className="text-amber-300 font-semibold font-mono">NCAIR1/N-ATLaS</span>.
-              A unified environment to test autoregressive generation, evaluate socio-legal context, diagnose integration failures, and deploy with the sovereign JavaScript SDK.
+            <p className="text-[#CBD5E1] text-sm leading-relaxed">
+              Accelerate developer integration with <span className="text-[#38BDF8] font-semibold font-mono">NCAIR1/N-ATLaS</span>.
+              A unified environment to test autoregressive token generation, evaluate socio-legal context under Nigerian statutes, diagnose integration failures, and deploy with the sovereign JavaScript SDK.
             </p>
+
             <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
+              <Button
+                variant="gradient"
+                size="md"
                 onClick={() => onNavigate('playground')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-semibold text-xs hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/10"
+                leftIcon={<Terminal className="w-4 h-4" />}
               >
-                <Terminal className="w-4 h-4" />
                 Launch Playground
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={() => onNavigate('evaluation')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs transition-colors"
+                leftIcon={<Activity className="w-4 h-4 text-[#38BDF8]" />}
               >
-                <Activity className="w-4 h-4 text-amber-400" />
                 Run Benchmark Lab
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={() => onNavigate('doctor')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs transition-colors"
+                leftIcon={<Stethoscope className="w-4 h-4 text-[#22C55E]" />}
               >
-                <Stethoscope className="w-4 h-4 text-emerald-400" />
                 Integration Doctor
-              </button>
+              </Button>
             </div>
           </div>
 
-          {/* Quick Runtime Badge Card */}
-          <div className="w-full lg:w-80 rounded-xl border border-slate-800/90 bg-slate-900/70 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono uppercase text-slate-400 font-medium">Model Status</span>
+          {/* Quick Runtime Telemetry Card */}
+          <div className="w-full lg:w-80 rounded-xl border border-[#334155] bg-[#172235]/90 p-4 space-y-3 shrink-0 shadow-lg">
+            <div className="flex items-center justify-between border-b border-[#334155] pb-2.5">
+              <span className="text-xs font-mono uppercase text-[#CBD5E1] font-semibold">
+                Runtime Status
+              </span>
               <button
+                type="button"
                 onClick={onRefreshHealth}
                 disabled={healthLoading}
-                className="text-slate-400 hover:text-amber-300 transition-colors"
+                className="text-[#94A3B8] hover:text-[#38BDF8] transition-colors p-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
                 title="Ping runtime"
+                aria-label="Refresh runtime health"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin text-amber-400' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin text-[#38BDF8]' : ''}`} />
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Connection:</span>
-                <span
-                  className={`font-mono font-semibold px-2 py-0.5 rounded text-[11px] ${
-                    isConnected
-                      ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/40'
-                      : isMock
-                      ? 'bg-amber-950/60 text-amber-300 border border-amber-800/40'
-                      : 'bg-rose-950/60 text-rose-300 border border-rose-800/40'
-                  }`}
-                >
-                  {isConnected ? 'CONNECTED' : isMock ? 'DEVELOPMENT MOCK' : 'NOT CONNECTED'}
+                <span className="text-[#94A3B8]">Connection:</span>
+                <Badge tone={badgeTone} size="xs">
+                  {statusLabel}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[#94A3B8]">Execution Mode:</span>
+                <span className="font-mono text-[#F8FAFC] uppercase text-[11px]">
+                  {health?.mode === 'local' ? 'Local PyTorch (8B)' : health?.mode === 'api' ? 'Remote Endpoint' : 'Synthetic Mock'}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Mode:</span>
-                <span className="font-mono text-slate-200 uppercase text-[11px]">
-                  {health?.mode === 'local' ? 'Local Model (PyTorch)' : health?.mode === 'api' ? 'Remote API' : 'Synthetic Mock'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Target Model:</span>
-                <span className="font-mono text-amber-300 text-[11px] truncate max-w-[150px]">
+                <span className="text-[#94A3B8]">Target Model:</span>
+                <span className="font-mono text-[#38BDF8] text-[11px] truncate max-w-[150px]">
                   {health?.modelId || 'NCAIR1/N-ATLaS'}
                 </span>
               </div>
 
-              <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 leading-normal">
-                {health?.details.message}
+              <div className="pt-2 border-t border-[#334155] text-[11px] text-[#CBD5E1] leading-normal">
+                {health?.details.message || 'Connecting to backend daemon...'}
               </div>
             </div>
           </div>
@@ -137,176 +155,216 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Grid: 5 Core Workflow Pillars */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold tracking-wider uppercase text-slate-400 font-mono">
+          <h2 className="text-xs font-semibold tracking-wider uppercase text-[#CBD5E1] font-mono">
             Workbench Pipeline: Connect → Explore → Test → Evaluate → Integrate
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           {/* 1. Connect */}
-          <div
+          <Card
+            variant="interactive"
+            padding="sm"
             onClick={() => onNavigate('settings')}
-            className="group cursor-pointer rounded-xl border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/80 hover:border-slate-700 p-4 transition-all"
+            className="flex flex-col justify-between"
           >
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Layers className="w-4 h-4" />
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-[#1D4ED8]/15 border border-[#1D4ED8]/30 text-[#60A5FA] flex items-center justify-center mb-2.5">
+                <Layers className="w-4 h-4" />
+              </div>
+              <div className="text-[10px] font-mono text-[#60A5FA] font-bold uppercase">Step 1</div>
+              <h3 className="text-sm font-bold text-[#F8FAFC] group-hover:text-[#38BDF8] transition-colors mt-0.5">
+                Connect Runtime
+              </h3>
+              <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2">
+                Configure PyTorch local daemon or remote endpoints without exposing secrets.
+              </p>
             </div>
-            <div className="text-[10px] font-mono uppercase text-blue-400 font-bold">Step 1</div>
-            <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
-              Connect Runtime
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-              Configure PyTorch local worker or official remote endpoints without exposing secrets.
-            </p>
-          </div>
+            <div className="flex items-center gap-1 text-[11px] text-[#94A3B8] group-hover:text-[#38BDF8] transition-colors mt-3 pt-2 border-t border-[#334155]/60 font-mono">
+              <span>Settings</span>
+              <ArrowRight className="w-3 h-3 ml-auto" />
+            </div>
+          </Card>
 
           {/* 2. Explore */}
-          <div
+          <Card
+            variant="interactive"
+            padding="sm"
             onClick={() => onNavigate('api-explorer')}
-            className="group cursor-pointer rounded-xl border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/80 hover:border-slate-700 p-4 transition-all"
+            className="flex flex-col justify-between"
           >
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Code2 className="w-4 h-4" />
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-[#38BDF8]/15 border border-[#38BDF8]/30 text-[#38BDF8] flex items-center justify-center mb-2.5">
+                <Code2 className="w-4 h-4" />
+              </div>
+              <div className="text-[10px] font-mono text-[#38BDF8] font-bold uppercase">Step 2</div>
+              <h3 className="text-sm font-bold text-[#F8FAFC] group-hover:text-[#38BDF8] transition-colors mt-0.5">
+                Explore APIs
+              </h3>
+              <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2">
+                Inspect request schemas, curl signatures, and TypeScript SDK integration code.
+              </p>
             </div>
-            <div className="text-[10px] font-mono uppercase text-amber-400 font-bold">Step 2</div>
-            <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
-              Explore APIs
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-              Inspect request schemas, curl signatures, and TypeScript SDK integration code.
-            </p>
-          </div>
+            <div className="flex items-center gap-1 text-[11px] text-[#94A3B8] group-hover:text-[#38BDF8] transition-colors mt-3 pt-2 border-t border-[#334155]/60 font-mono">
+              <span>API Explorer</span>
+              <ArrowRight className="w-3 h-3 ml-auto" />
+            </div>
+          </Card>
 
           {/* 3. Test */}
-          <div
+          <Card
+            variant="interactive"
+            padding="sm"
             onClick={() => onNavigate('playground')}
-            className="group cursor-pointer rounded-xl border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/80 hover:border-slate-700 p-4 transition-all"
+            className="flex flex-col justify-between"
           >
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Terminal className="w-4 h-4" />
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] flex items-center justify-center mb-2.5">
+                <Terminal className="w-4 h-4" />
+              </div>
+              <div className="text-[10px] font-mono text-[#22C55E] font-bold uppercase">Step 3</div>
+              <h3 className="text-sm font-bold text-[#F8FAFC] group-hover:text-[#38BDF8] transition-colors mt-0.5">
+                Test Playground
+              </h3>
+              <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2">
+                Prompt across English, Pidgin, Yoruba, Hausa, and Igbo with live telemetry.
+              </p>
             </div>
-            <div className="text-[10px] font-mono uppercase text-emerald-400 font-bold">Step 3</div>
-            <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
-              Test Playground
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-              Generate responses across English, Pidgin, Yoruba, Hausa, and Igbo with live telemetry.
-            </p>
-          </div>
+            <div className="flex items-center gap-1 text-[11px] text-[#94A3B8] group-hover:text-[#38BDF8] transition-colors mt-3 pt-2 border-t border-[#334155]/60 font-mono">
+              <span>Playground</span>
+              <ArrowRight className="w-3 h-3 ml-auto" />
+            </div>
+          </Card>
 
           {/* 4. Evaluate */}
-          <div
+          <Card
+            variant="interactive"
+            padding="sm"
             onClick={() => onNavigate('evaluation')}
-            className="group cursor-pointer rounded-xl border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/80 hover:border-slate-700 p-4 transition-all"
+            className="flex flex-col justify-between"
           >
-            <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Activity className="w-4 h-4" />
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mb-2.5">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div className="text-[10px] font-mono text-indigo-400 font-bold uppercase">Step 4</div>
+              <h3 className="text-sm font-bold text-[#F8FAFC] group-hover:text-[#38BDF8] transition-colors mt-0.5">
+                Evaluate Context
+              </h3>
+              <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2">
+                4-Axis socio-legal rubric verifying CAMA 2020, VAT acts, and indigenous vernacular.
+              </p>
             </div>
-            <div className="text-[10px] font-mono uppercase text-purple-400 font-bold">Step 4</div>
-            <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
-              Evaluate Context
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-              4-Axis socio-legal rubric verifying CAMA 2020, VAT acts, and indigenous vernacular.
-            </p>
-          </div>
+            <div className="flex items-center gap-1 text-[11px] text-[#94A3B8] group-hover:text-[#38BDF8] transition-colors mt-3 pt-2 border-t border-[#334155]/60 font-mono">
+              <span>Evaluation Lab</span>
+              <ArrowRight className="w-3 h-3 ml-auto" />
+            </div>
+          </Card>
 
           {/* 5. Integrate */}
-          <div
+          <Card
+            variant="interactive"
+            padding="sm"
             onClick={() => onNavigate('doctor')}
-            className="group cursor-pointer rounded-xl border border-slate-800/80 bg-slate-900/40 hover:bg-slate-900/80 hover:border-slate-700 p-4 transition-all"
+            className="flex flex-col justify-between"
           >
-            <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <Stethoscope className="w-4 h-4" />
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mb-2.5">
+                <Stethoscope className="w-4 h-4" />
+              </div>
+              <div className="text-[10px] font-mono text-rose-400 font-bold uppercase">Step 5</div>
+              <h3 className="text-sm font-bold text-[#F8FAFC] group-hover:text-[#38BDF8] transition-colors mt-0.5">
+                Integrate & Heal
+              </h3>
+              <p className="text-xs text-[#94A3B8] mt-1 line-clamp-2">
+                Deterministic troubleshooting for CUDA memory, gated HF tokens, and timeouts.
+              </p>
             </div>
-            <div className="text-[10px] font-mono uppercase text-rose-400 font-bold">Step 5</div>
-            <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
-              Integrate & Heal
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
-              Deterministic troubleshooting for CUDA memory, gated HF tokens, and proxy timeouts.
-            </p>
-          </div>
+            <div className="flex items-center gap-1 text-[11px] text-[#94A3B8] group-hover:text-[#38BDF8] transition-colors mt-3 pt-2 border-t border-[#334155]/60 font-mono">
+              <span>Doctor</span>
+              <ArrowRight className="w-3 h-3 ml-auto" />
+            </div>
+          </Card>
         </div>
       </div>
 
-      {/* Dual Section: Empirical Evaluation Summary (Rule 5) & Model Card Details */}
+      {/* Dual Section: Empirical Evaluation Summary & Official Model Profile */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Empirical Evaluation Summary */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <div className="flex items-center justify-between">
+        <Card variant="standard" padding="md" className="space-y-4">
+          <div className="flex items-center justify-between border-b border-[#334155] pb-3">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-amber-400" />
-              <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+              <Activity className="w-4 h-4 text-[#38BDF8]" />
+              <h3 className="text-sm font-bold text-[#F8FAFC] font-mono uppercase tracking-wider">
                 Empirical Evaluation Status
               </h3>
             </div>
             {evaluationRuns.length > 0 && (
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                {evaluationRuns.length} Test Runs Recorded
-              </span>
+              <Badge tone="connected" size="xs">
+                {evaluationRuns.length} Test Runs
+              </Badge>
             )}
           </div>
 
           {evaluationRuns.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-800 p-6 text-center space-y-3">
-              <div className="text-xs font-mono font-semibold text-slate-400 uppercase tracking-wider">
+            <div className="rounded-lg border border-dashed border-[#334155] p-6 text-center space-y-3 bg-[#101827]/40">
+              <div className="text-xs font-mono font-semibold text-[#CBD5E1] uppercase tracking-wider">
                 NOT YET EVALUATED
               </div>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
-                Per Rule 5 (No Fabricated Evaluation Results), all benchmark scores must originate from actual execution runs. No evaluations have been run in this session yet.
+              <p className="text-xs text-[#94A3B8] max-w-md mx-auto leading-relaxed">
+                Benchmark scores require execution against the 4-axis socio-legal evaluation suite. No tests have been recorded in this session.
               </p>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => onNavigate('evaluation')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-medium transition-colors"
+                rightIcon={<ArrowRight className="w-3.5 h-3.5 text-[#38BDF8]" />}
               >
-                Open Evaluation Lab to run benchmarks
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+                Open Evaluation Lab
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                  <div className="text-[10px] text-slate-400 font-mono uppercase">Overall Average</div>
-                  <div className="text-xl font-bold font-mono text-amber-400 mt-1">
-                    {evaluationReport?.averageScore ?? '—'} <span className="text-xs text-slate-500">/ 5.0</span>
-                  </div>
-                </div>
-                <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                  <div className="text-[10px] text-slate-400 font-mono uppercase">Passed Cases</div>
-                  <div className="text-xl font-bold font-mono text-emerald-400 mt-1">
-                    {evaluationReport?.passedCases} / {evaluationReport?.totalCases}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                  <div className="text-[10px] text-slate-400 font-mono uppercase">Avg Latency</div>
-                  <div className="text-xl font-bold font-mono text-blue-400 mt-1">
-                    {evaluationReport?.averageLatencyMs} <span className="text-xs text-slate-500">ms</span>
-                  </div>
-                </div>
+                <MetricCard
+                  label="Average Score"
+                  value={evaluationReport?.averageScore !== undefined ? evaluationReport.averageScore.toFixed(1) : '—'}
+                  unit="/ 5.0"
+                  tone="cyan"
+                />
+                <MetricCard
+                  label="Cases Passed"
+                  value={evaluationReport ? `${evaluationReport.passedCases}/${evaluationReport.totalCases}` : '—'}
+                  tone="green"
+                />
+                <MetricCard
+                  label="Avg Latency"
+                  value={evaluationReport?.averageLatencyMs !== undefined ? evaluationReport.averageLatencyMs : '—'}
+                  unit="ms"
+                  tone="blue"
+                />
               </div>
 
               {/* Recent runs preview */}
               <div className="space-y-2">
-                <div className="text-xs font-medium text-slate-400 font-mono">Recent Test Runs:</div>
+                <div className="text-xs font-medium text-[#CBD5E1] font-mono">Recent Test Executions:</div>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {evaluationRuns.slice(0, 3).map((run) => (
                     <div
                       key={run.id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-slate-950/40 border border-slate-800/80 text-xs"
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-[#101827]/80 border border-[#334155] text-xs"
                     >
-                      <div className="truncate max-w-[240px]">
-                        <span className="font-mono text-slate-400 text-[11px] mr-2">[{run.caseId}]</span>
-                        <span className="text-slate-200">{run.prompt}</span>
+                      <div className="truncate max-w-[240px] flex items-center gap-2">
+                        <span className="font-mono text-[#38BDF8] text-[11px] shrink-0">[{run.caseId}]</span>
+                        <span className="text-[#F8FAFC] truncate">{run.prompt}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         <span
-                          className={`font-mono text-[11px] font-bold ${
+                          className={`font-mono text-[11px] font-bold tabular-nums ${
                             run.status === 'passed'
-                              ? 'text-emerald-400'
+                              ? 'text-[#22C55E]'
                               : run.status === 'warning'
-                              ? 'text-amber-400'
+                              ? 'text-[#F59E0B]'
                               : 'text-rose-400'
                           }`}
                         >
@@ -320,23 +378,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               <div className="flex justify-end pt-1">
                 <button
+                  type="button"
                   onClick={() => onNavigate('evaluation')}
-                  className="text-xs text-amber-300 hover:text-amber-200 inline-flex items-center gap-1 font-mono"
+                  className="text-xs text-[#38BDF8] hover:text-[#7DD3FC] inline-flex items-center gap-1 font-mono focus-visible:outline-none focus-visible:underline"
                 >
-                  View complete evaluation report & export
+                  <span>View comprehensive evaluation report & export</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Model Card Reference Details */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 space-y-4">
-          <div className="flex items-center justify-between">
+        <Card variant="standard" padding="md" className="space-y-4">
+          <div className="flex items-center justify-between border-b border-[#334155] pb-3">
             <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-bold text-white font-mono uppercase tracking-wider">
+              <Database className="w-4 h-4 text-[#38BDF8]" />
+              <h3 className="text-sm font-bold text-[#F8FAFC] font-mono uppercase tracking-wider">
                 Official Model Profile (NCAIR1/N-ATLaS)
               </h3>
             </div>
@@ -344,53 +403,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               href="https://huggingface.co/NCAIR1/N-ATLaS"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-slate-400 hover:text-amber-300 inline-flex items-center gap-1"
+              className="text-xs text-[#CBD5E1] hover:text-[#38BDF8] inline-flex items-center gap-1 focus-visible:outline-none focus-visible:underline"
             >
-              Hugging Face Hub
-              <ExternalLink className="w-3 h-3" />
+              <span>Hugging Face Hub</span>
+              <ExternalLink className="w-3 h-3 text-[#94A3B8]" />
             </a>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/70">
-              <div className="text-slate-400 text-[10px] font-mono">ORGANIZATION</div>
-              <div className="text-slate-200 font-semibold mt-0.5">NCAIR / FMCIDE Nigeria</div>
+            <div className="p-3 rounded-lg bg-[#101827]/80 border border-[#334155]">
+              <div className="text-[#94A3B8] text-[10px] font-mono">ORGANIZATION</div>
+              <div className="text-[#F8FAFC] font-semibold mt-0.5">NCAIR / FMCIDE Nigeria</div>
             </div>
-            <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/70">
-              <div className="text-slate-400 text-[10px] font-mono">BASE ARCHITECTURE</div>
-              <div className="text-slate-200 font-semibold mt-0.5">Llama-3-8B-Instruct Base</div>
+            <div className="p-3 rounded-lg bg-[#101827]/80 border border-[#334155]">
+              <div className="text-[#94A3B8] text-[10px] font-mono">BASE ARCHITECTURE</div>
+              <div className="text-[#F8FAFC] font-semibold mt-0.5">Llama-3-8B-Instruct Base</div>
             </div>
-            <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/70">
-              <div className="text-slate-400 text-[10px] font-mono">PRECISION & SIZING</div>
-              <div className="text-slate-200 font-semibold mt-0.5">8 Billion Params (bfloat16)</div>
+            <div className="p-3 rounded-lg bg-[#101827]/80 border border-[#334155]">
+              <div className="text-[#94A3B8] text-[10px] font-mono">PRECISION & SIZING</div>
+              <div className="text-[#F8FAFC] font-semibold mt-0.5">8 Billion Params (bfloat16)</div>
             </div>
-            <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/70">
-              <div className="text-slate-400 text-[10px] font-mono">CONTEXT WINDOW</div>
-              <div className="text-slate-200 font-semibold mt-0.5">8,192 Tokens</div>
+            <div className="p-3 rounded-lg bg-[#101827]/80 border border-[#334155]">
+              <div className="text-[#94A3B8] text-[10px] font-mono">CONTEXT WINDOW</div>
+              <div className="text-[#F8FAFC] font-semibold mt-0.5">8,192 Tokens</div>
             </div>
           </div>
 
           <div>
-            <div className="text-[10px] font-mono text-slate-400 uppercase mb-1.5">Linguistic Coverage:</div>
-            <div className="flex flex-wrap gap-1.5">
-              {['English (Nigerian Context)', 'Yoruba (Èdè Yorùbá)', 'Hausa (Harshen Hausa)', 'Igbo (Asụsụ Igbo)', 'Nigerian Pidgin'].map(
-                (lang) => (
-                  <span
-                    key={lang}
-                    className="px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800 text-[11px]"
-                  >
-                    {lang}
-                  </span>
-                )
-              )}
+            <div className="text-[10px] font-mono text-[#CBD5E1] uppercase mb-2">Supported Language Ensembles:</div>
+            <div className="flex flex-wrap gap-2 text-xs text-[#CBD5E1]">
+              <span className="bg-[#101827] border border-[#334155] px-2.5 py-1 rounded-md text-[11px] text-[#F8FAFC]">English (Nigerian Legal Context)</span>
+              <span className="bg-[#101827] border border-[#334155] px-2.5 py-1 rounded-md text-[11px] text-[#F8FAFC]">Yoruba (Èdè Yorùbá)</span>
+              <span className="bg-[#101827] border border-[#334155] px-2.5 py-1 rounded-md text-[11px] text-[#F8FAFC]">Hausa (Harshen Hausa)</span>
+              <span className="bg-[#101827] border border-[#334155] px-2.5 py-1 rounded-md text-[11px] text-[#F8FAFC]">Igbo (Asụsụ Igbo)</span>
+              <span className="bg-[#101827] border border-[#334155] px-2.5 py-1 rounded-md text-[11px] text-[#F8FAFC]">Nigerian Pidgin (Naija)</span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+          <div className="pt-2 border-t border-[#334155] text-xs text-[#94A3B8] flex items-center justify-between">
             <span>License: Llama 3 Community / Sovereign AI</span>
-            <span className="font-mono text-amber-400/90 text-[11px]">PS1 Developer Infra</span>
+            <span className="font-mono text-[#38BDF8] text-[11px]">PS1 Developer Infra</span>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

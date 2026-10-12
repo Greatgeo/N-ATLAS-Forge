@@ -9,7 +9,7 @@ import { DocsView } from './components/views/DocsView.tsx';
 import { SettingsView } from './components/views/SettingsView.tsx';
 import { NAtlasHealth, EvaluationReport, EvaluationRunResult } from '../packages/shared/types.ts';
 import { fetchHealth, fetchEvaluations } from './lib/api.ts';
-import { ShieldCheck, ExternalLink, Heart } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
@@ -53,7 +53,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050814] text-slate-100 flex flex-col font-sans selection:bg-amber-500/20 selection:text-amber-200">
+    <div className="min-h-screen bg-[#101827] text-[#F8FAFC] flex flex-col font-sans selection:bg-[#1D4ED8]/30 selection:text-[#38BDF8]">
       {/* Navigation Bar */}
       <Navbar
         activeTab={activeTab}
@@ -109,29 +109,28 @@ export default function App() {
       </main>
 
       {/* Clean Technical Footer */}
-      <footer className="border-t border-slate-900 bg-[#04060e] py-6 text-xs text-slate-500 mt-auto">
+      <footer className="border-t border-[#334155]/60 bg-[#0B1120] py-6 text-xs text-[#94A3B8] mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 font-bold text-slate-300 font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <div className="font-bold text-[#F8FAFC] font-mono tracking-tight">
               N-ATLAS FORGE
             </div>
-            <span className="text-slate-700">|</span>
-            <span>National AI Innovation Challenge 2026 — PS1 Developer Infrastructure</span>
+            <span className="text-[#334155]" aria-hidden="true">|</span>
+            <span className="text-[#CBD5E1]">National AI Innovation Challenge 2026 — PS1 Developer Infrastructure</span>
           </div>
 
           <div className="flex items-center gap-4 text-[11px] font-mono">
-            <span className="text-slate-400">Target: NCAIR1/N-ATLaS</span>
+            <span className="text-[#94A3B8]">Target: NCAIR1/N-ATLaS</span>
             <a
               href="https://huggingface.co/NCAIR1/N-ATLaS"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-amber-300 transition-colors inline-flex items-center gap-1"
+              className="hover:text-[#38BDF8] text-[#CBD5E1] transition-colors inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#38BDF8] rounded"
             >
               Model Card
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3 h-3 text-[#94A3B8]" />
             </a>
-            <span className="text-slate-600">v1.0.0-naic</span>
+            <span className="text-[#475569]">v1.0.0-naic</span>
           </div>
         </div>
       </footer>
